@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Siyasi Grid Prototip</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{font-family:Arial;margin:0;background:#111;color:white}
+.topbar{display:flex;justify-content:space-between;padding:8px;background:#222}
+button{padding:8px;margin:4px}
+.layout{display:flex;flex-wrap:wrap}
+.left{flex:1;min-width:320px;padding:10px}
+.right{width:260px;padding:10px;background:#1b1b1b}
+.grid{
+display:grid;
+grid-template-columns:40px repeat(3,50px) 20px repeat(3,50px);
+gap:4px;align-items:center
+}
+.cell{height:50px;background:#333;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer}
+.cell.active{background:#2e7d32}
+.road{background:#555;height:50px}
+.label{background:none}
+.partyCard{border:1px solid #555;padding:10px;margin:10px;cursor:pointer}
+.hidden{display:none}
+@media(max-width:700px){
+.layout{flex-direction:column}
+.right{width:auto}
+}
+</style>
+</head>
+
+<body>
+
+<div id="partySelect">
+<h2>Parti Seç</h2>
+
+<div class="partyCard" onclick="selectParty('MS')">
+Parti X<br>Genel Başkan: Yüce Amınake<br>İdeoloji: Merkez Sol<br>Para:100
+</div>
+
+<div class="partyCard" onclick="selectParty('MR')">
+Parti Y<br>Genel Başkan: Şacaettin<br>İdeoloji: Merkez Sağ<br>Para:100
+</div>
+
+<div class="partyCard" onclick="selectParty('ASOL')">
+Parti Z<br>Genel Başkan: Powsın<br>İdeoloji: Aşırı Sol<br>Para:100
+</div>
+</div>
+
+<div id="game" class="hidden">
+
+<div class="topbar">
+<button onclick="resetGame()">Reset</button>
+<div>Tur: <span id="turn">1</span></div>
+<button onclick="endTurn()">Tur Bitir</button>
+</div>
+
+<div class="layout">
+
+<div class="left">
+<div id="cityTabs"></div>
+<div id="grid"></div>
+</div>
+
+<div class="right">
+<h3>Şehir Bilgisi</h3>
+<div id="cityInfo"></div>
+</div>
+
+</div>
+
+<div style="background:#222;padding:10px">
+Parti: <span id="partyInfo"></span> |
+Para: <span id="money"></span>
+<br>
+Yatırım Yap:
+<button onclick="invest('A')">A</button>
+<button onclick="invest('B')">B</button>
+<button onclick="invest('C')">C</button>
+</div>
+
+</div>
+
+<script>
+const ideOrder=["ASOL","MS","MR","ASAG"];
+
+const cities={
+A:{name:"Şehir A",pop:17,dist:{MR:35,MS:40,ASOL:10,ASAG:15},hq:false,invest:0},
+B:{name:"Şehir B",pop:5,dist:{MR:45,ASAG:25,MS:20,ASOL:10},hq:false,invest:0},
+C:{name:"Şehir C",pop:3,dist:{MS:55,ASAG:5,ASOL:10,MR:20},hq:false,invest:0}
+};
+
+let partyIdeology=null;
+let money=100;
+let turn=1;
+let currentCity="A";
+
+function selectParty(id){
+partyIdeology=id;
+document.getElementById("partySelect").classList.add("hidden");
+document.getElementById("game").classList.remove("hidden");
+updatePartyInfo();
+renderTabs();
+renderGrid();
+updateCityInfo();
+}
+
+function resetGame(){location.reload()}
+
+function ideologyScore(cityIde){
+const d=Math.abs(ideOrder.indexOf(cityIde)-ideOrder.indexOf(partyIdeology));
+if(d===0)return .60;
+if(d===1)return .25;
+if(d===2)return .10;
+return .05;
+}
+
+function election(){
+let total=0;
+for(const k in cities){
+const c=cities[k];
+for(const ide in c.dist){
+const base=c.dist[ide]/100*c.pop*1000000;
+let score=base*ideologyScore(ide);
+if(c.hq)score*=1.15;
+score*=1+(c.invest*.05);
+total+=score;
+}
+}
+alert("Toplam Tahmini Oy: "+Math.floor(total).toLocaleString());
+}
+
+function endTurn(){
+money-=10;
+turn++;
+document.getElementById("turn").innerText=turn;
+if(turn%5===0)election();
+updatePartyInfo();
+}
+
+function invest(k){
+if(money<10)return alert("Para yok");
+cities[k].invest++;
+money-=10;
+updatePartyInfo();
+updateCityInfo();
+}
+
+function updatePartyInfo(){
+document.getElementById("partyInfo").innerText=partyIdeology;
+document.getElementById("money").innerText=money;
+}
+
+function renderTabs(){
+const d=document.getElementById("cityTabs");
+d.innerHTML="";
+["A","B","C"].forEach(k=>{
+const b=document.createElement("button");
+b.innerText=cities[k].name;
+b.onclick=()=>{currentCity=k;renderGrid();updateCityInfo()};
+d.appendChild(b);
+});
+}
+
+function renderGrid(){
+const g=document.getElementById("grid");
+g.innerHTML="";
+
+g.appendChild(divLabel(""));
+for(let i=1;i<=3;i++)g.appendChild(divLabel(i));
+g.appendChild(divLabel(""));
+for(let i=4;i<=6;i++)g.appendChild(divLabel(i));
+
+const rows=["A","B","C","D","E","F"];
+
+rows.forEach(r=>{
+g.appendChild(divLabel(r));
+for(let c=1;c<=6;c++){
+if(c===4){g.appendChild(divRoad());}
+const cell=document.createElement("div");
+cell.className="cell";
+cell.dataset.id=r+c;
+if(r==="C" && c===3){
+cell.innerText=cities[currentCity].hq?"HQ":"C3";
+}else{
+cell.innerText="EV";
+}
+cell.onclick=()=>cellClick(cell,r,c);
+g.appendChild(cell);
+}
+});
+}
+
+function cellClick(cell,r,c){
+cell.classList.toggle("active");
+if(r==="C" && c===3){
+if(cities[currentCity].hq)return;
+if(money<20)return alert("Para yok");
+cities[currentCity].hq=true;
+money-=20;
+cell.innerText="HQ";
+updatePartyInfo();
+updateCityInfo();
+}
+}
+
+function divLabel(t){
+const d=document.createElement("div");
+d.className="label";
+d.innerText=t;
+return d;
+}
+function divRoad(){
+const d=document.createElement("div");
+d.className="road";
+return d;
+}
+
+function updateCityInfo(){
+const c=cities[currentCity];
+document.getElementById("cityInfo").innerHTML=`
+<b>${c.name}</b><br>
+Nüfus: ${c.pop} M<br>
+Merkez Sol: %${c.dist.MS||0}<br>
+Merkez Sağ: %${c.dist.MR||0}<br>
+Aşırı Sol: %${c.dist.ASOL||0}<br>
+Aşırı Sağ: %${c.dist.ASAG||0}<br>
+HQ: ${c.hq?"Var":"Yok"}<br>
+Yatırım: ${c.invest}
+`;
+}
+</script>
+
+</body>
+</html>
