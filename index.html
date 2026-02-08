@@ -2,27 +2,48 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Siyasi Grid Prototip</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Siyasi Grid Prototip</title>
 
 <style>
-body{font-family:Arial;margin:0;background:#111;color:white}
-.topbar{display:flex;justify-content:space-between;padding:8px;background:#222}
+body{margin:0;font-family:Arial;background:#111;color:white}
+.topbar{display:flex;justify-content:space-between;background:#222;padding:8px}
 button{padding:8px;margin:4px}
+
 .layout{display:flex;flex-wrap:wrap}
-.left{flex:1;min-width:320px;padding:10px}
-.right{width:260px;padding:10px;background:#1b1b1b}
+.left{flex:1;min-width:340px;padding:10px}
+.right{width:260px;background:#1a1a1a;padding:10px}
+
 .grid{
 display:grid;
-grid-template-columns:40px repeat(3,50px) 20px repeat(3,50px);
-gap:4px;align-items:center
+grid-template-columns: 40px repeat(3,60px) 20px repeat(3,60px);
+gap:6px;
+align-items:center;
 }
-.cell{height:50px;background:#333;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer}
+
+.cell{
+width:60px;height:60px;
+background:#333;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+font-size:12px;
+}
+
 .cell.active{background:#2e7d32}
-.road{background:#555;height:50px}
-.label{background:none}
-.partyCard{border:1px solid #555;padding:10px;margin:10px;cursor:pointer}
+.road{width:20px;height:60px;background:#555}
+.label{display:flex;align-items:center;justify-content:center}
+
+.partyCard{
+border:1px solid #555;
+padding:12px;
+margin:10px;
+cursor:pointer
+}
+
 .hidden{display:none}
+
 @media(max-width:700px){
 .layout{flex-direction:column}
 .right{width:auto}
@@ -32,26 +53,28 @@ gap:4px;align-items:center
 
 <body>
 
+<!-- PARTİ SEÇİM -->
 <div id="partySelect">
 <h2>Parti Seç</h2>
 
 <div class="partyCard" onclick="selectParty('MS')">
-Parti X<br>Genel Başkan: Yüce Amınake<br>İdeoloji: Merkez Sol<br>Para:100
+Parti X — Yüce Amınake — Merkez Sol — Para 100
 </div>
 
 <div class="partyCard" onclick="selectParty('MR')">
-Parti Y<br>Genel Başkan: Şacaettin<br>İdeoloji: Merkez Sağ<br>Para:100
+Parti Y — Şacaettin — Merkez Sağ — Para 100
 </div>
 
 <div class="partyCard" onclick="selectParty('ASOL')">
-Parti Z<br>Genel Başkan: Powsın<br>İdeoloji: Aşırı Sol<br>Para:100
+Parti Z — Powsın — Aşırı Sol — Para 100
 </div>
 </div>
 
+<!-- OYUN -->
 <div id="game" class="hidden">
 
 <div class="topbar">
-<button onclick="resetGame()">Reset</button>
+<button onclick="location.reload()">Reset</button>
 <div>Tur: <span id="turn">1</span></div>
 <button onclick="endTurn()">Tur Bitir</button>
 </div>
@@ -59,7 +82,7 @@ Parti Z<br>Genel Başkan: Powsın<br>İdeoloji: Aşırı Sol<br>Para:100
 <div class="layout">
 
 <div class="left">
-<div id="cityTabs"></div>
+<div id="tabs"></div>
 <div id="grid"></div>
 </div>
 
@@ -72,9 +95,8 @@ Parti Z<br>Genel Başkan: Powsın<br>İdeoloji: Aşırı Sol<br>Para:100
 
 <div style="background:#222;padding:10px">
 Parti: <span id="partyInfo"></span> |
-Para: <span id="money"></span>
-<br>
-Yatırım Yap:
+Para: <span id="money"></span><br>
+Yatırım:
 <button onclick="invest('A')">A</button>
 <button onclick="invest('B')">B</button>
 <button onclick="invest('C')">C</button>
@@ -91,28 +113,94 @@ B:{name:"Şehir B",pop:5,dist:{MR:45,ASAG:25,MS:20,ASOL:10},hq:false,invest:0},
 C:{name:"Şehir C",pop:3,dist:{MS:55,ASAG:5,ASOL:10,MR:20},hq:false,invest:0}
 };
 
-let partyIdeology=null;
+let party=null;
 let money=100;
 let turn=1;
-let currentCity="A";
+let current="A";
 
-function selectParty(id){
-partyIdeology=id;
+function selectParty(p){
+party=p;
 document.getElementById("partySelect").classList.add("hidden");
 document.getElementById("game").classList.remove("hidden");
-updatePartyInfo();
-renderTabs();
-renderGrid();
-updateCityInfo();
+drawTabs();
+drawGrid();
+updatePanels();
 }
 
-function resetGame(){location.reload()}
+function drawTabs(){
+const d=document.getElementById("tabs");
+d.innerHTML="";
+["A","B","C"].forEach(k=>{
+const b=document.createElement("button");
+b.textContent=cities[k].name;
+b.onclick=()=>{current=k;drawGrid();updatePanels()};
+d.appendChild(b);
+});
+}
 
-function ideologyScore(cityIde){
-const d=Math.abs(ideOrder.indexOf(cityIde)-ideOrder.indexOf(partyIdeology));
-if(d===0)return .60;
-if(d===1)return .25;
-if(d===2)return .10;
+function drawGrid(){
+const g=document.getElementById("grid");
+g.innerHTML="";
+
+g.className="grid";
+
+g.appendChild(lbl(""));
+for(let i=1;i<=3;i++)g.appendChild(lbl(i));
+g.appendChild(lbl(""));
+for(let i=4;i<=6;i++)g.appendChild(lbl(i));
+
+const rows=["A","B","C","D","E","F"];
+
+rows.forEach(r=>{
+g.appendChild(lbl(r));
+for(let c=1;c<=6;c++){
+if(c===4)g.appendChild(road());
+
+const d=document.createElement("div");
+d.className="cell";
+
+if(r==="C" && c===3){
+d.textContent=cities[current].hq?"HQ":"C3";
+}else{
+d.textContent="EV";
+}
+
+d.onclick=()=>clickCell(d,r,c);
+g.appendChild(d);
+}
+});
+}
+
+function clickCell(d,r,c){
+d.classList.toggle("active");
+
+if(r==="C" && c===3 && !cities[current].hq){
+if(money<20)return alert("Para yok");
+cities[current].hq=true;
+money-=20;
+d.textContent="HQ";
+updatePanels();
+}
+}
+
+function road(){
+const d=document.createElement("div");
+d.className="road";
+return d;
+}
+
+function lbl(t){
+const d=document.createElement("div");
+d.className="label";
+d.textContent=t;
+return d;
+}
+
+function ideologyScore(i){
+const dist=Math.abs(ideOrder.indexOf(i)-ideOrder.indexOf(party));
+if(dist===0)return .60;
+if(dist===1)return .25;
+if(dist===2)return .10;
 return .05;
 }
 
@@ -121,104 +209,36 @@ let total=0;
 for(const k in cities){
 const c=cities[k];
 for(const ide in c.dist){
-const base=c.dist[ide]/100*c.pop*1000000;
-let score=base*ideologyScore(ide);
-if(c.hq)score*=1.15;
-score*=1+(c.invest*.05);
-total+=score;
+let base=c.dist[ide]/100*c.pop*1000000;
+let v=base*ideologyScore(ide);
+if(c.hq)v*=1.15;
+v*=1+(c.invest*.05);
+total+=v;
 }
 }
-alert("Toplam Tahmini Oy: "+Math.floor(total).toLocaleString());
-}
-
-function endTurn(){
-money-=10;
-turn++;
-document.getElementById("turn").innerText=turn;
-if(turn%5===0)election();
-updatePartyInfo();
+alert("Tahmini Oy: "+Math.floor(total).toLocaleString());
 }
 
 function invest(k){
 if(money<10)return alert("Para yok");
 cities[k].invest++;
 money-=10;
-updatePartyInfo();
-updateCityInfo();
+updatePanels();
 }
 
-function updatePartyInfo(){
-document.getElementById("partyInfo").innerText=partyIdeology;
-document.getElementById("money").innerText=money;
+function endTurn(){
+money-=10;
+turn++;
+if(turn%5===0)election();
+updatePanels();
 }
 
-function renderTabs(){
-const d=document.getElementById("cityTabs");
-d.innerHTML="";
-["A","B","C"].forEach(k=>{
-const b=document.createElement("button");
-b.innerText=cities[k].name;
-b.onclick=()=>{currentCity=k;renderGrid();updateCityInfo()};
-d.appendChild(b);
-});
-}
+function updatePanels(){
+document.getElementById("partyInfo").textContent=party;
+document.getElementById("money").textContent=money;
+document.getElementById("turn").textContent=turn;
 
-function renderGrid(){
-const g=document.getElementById("grid");
-g.innerHTML="";
-
-g.appendChild(divLabel(""));
-for(let i=1;i<=3;i++)g.appendChild(divLabel(i));
-g.appendChild(divLabel(""));
-for(let i=4;i<=6;i++)g.appendChild(divLabel(i));
-
-const rows=["A","B","C","D","E","F"];
-
-rows.forEach(r=>{
-g.appendChild(divLabel(r));
-for(let c=1;c<=6;c++){
-if(c===4){g.appendChild(divRoad());}
-const cell=document.createElement("div");
-cell.className="cell";
-cell.dataset.id=r+c;
-if(r==="C" && c===3){
-cell.innerText=cities[currentCity].hq?"HQ":"C3";
-}else{
-cell.innerText="EV";
-}
-cell.onclick=()=>cellClick(cell,r,c);
-g.appendChild(cell);
-}
-});
-}
-
-function cellClick(cell,r,c){
-cell.classList.toggle("active");
-if(r==="C" && c===3){
-if(cities[currentCity].hq)return;
-if(money<20)return alert("Para yok");
-cities[currentCity].hq=true;
-money-=20;
-cell.innerText="HQ";
-updatePartyInfo();
-updateCityInfo();
-}
-}
-
-function divLabel(t){
-const d=document.createElement("div");
-d.className="label";
-d.innerText=t;
-return d;
-}
-function divRoad(){
-const d=document.createElement("div");
-d.className="road";
-return d;
-}
-
-function updateCityInfo(){
-const c=cities[currentCity];
+const c=cities[current];
 document.getElementById("cityInfo").innerHTML=`
 <b>${c.name}</b><br>
 Nüfus: ${c.pop} M<br>
