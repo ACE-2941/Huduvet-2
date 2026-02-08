@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Siyasi Grid Prototip</title>
+<title>Siyasi Grid</title>
 
 <style>
 body{margin:0;font-family:Arial;background:#111;color:white}
@@ -14,11 +14,33 @@ button{padding:8px;margin:4px}
 .left{flex:1;min-width:340px;padding:10px}
 .right{width:260px;background:#1a1a1a;padding:10px}
 
-.grid{
+.colNumbers{
 display:grid;
-grid-template-columns: 40px repeat(3,60px) 20px repeat(3,60px);
+grid-template-columns:repeat(3,60px) 20px repeat(3,60px);
 gap:6px;
+margin-left:30px;
+margin-bottom:6px;
+font-size:12px;
+opacity:.8;
+}
+
+.mapRow{
+display:flex;
 align-items:center;
+margin-bottom:6px;
+}
+
+.rowLabel{
+width:24px;
+text-align:center;
+font-size:12px;
+opacity:.8;
+}
+
+.gridRow{
+display:grid;
+grid-template-columns:repeat(3,60px) 20px repeat(3,60px);
+gap:6px;
 }
 
 .cell{
@@ -33,7 +55,6 @@ font-size:12px;
 
 .cell.active{background:#2e7d32}
 .road{width:20px;height:60px;background:#555}
-.label{display:flex;align-items:center;justify-content:center}
 
 .partyCard{
 border:1px solid #555;
@@ -53,24 +74,22 @@ cursor:pointer
 
 <body>
 
-<!-- PARTİ SEÇİM -->
 <div id="partySelect">
 <h2>Parti Seç</h2>
 
 <div class="partyCard" onclick="selectParty('MS')">
-Parti X — Yüce Amınake — Merkez Sol — Para 100
+Parti X — Merkez Sol — Para 100
 </div>
 
 <div class="partyCard" onclick="selectParty('MR')">
-Parti Y — Şacaettin — Merkez Sağ — Para 100
+Parti Y — Merkez Sağ — Para 100
 </div>
 
 <div class="partyCard" onclick="selectParty('ASOL')">
-Parti Z — Powsın — Aşırı Sol — Para 100
+Parti Z — Aşırı Sol — Para 100
 </div>
 </div>
 
-<!-- OYUN -->
 <div id="game" class="hidden">
 
 <div class="topbar">
@@ -80,17 +99,21 @@ Parti Z — Powsın — Aşırı Sol — Para 100
 </div>
 
 <div class="layout">
-
 <div class="left">
 <div id="tabs"></div>
-<div id="grid"></div>
+
+<div class="colNumbers">
+<div>1</div><div>2</div><div>3</div><div></div><div>4</div><div>5</div><div>6</div>
+</div>
+
+<div id="map"></div>
+
 </div>
 
 <div class="right">
 <h3>Şehir Bilgisi</h3>
 <div id="cityInfo"></div>
 </div>
-
 </div>
 
 <div style="background:#222;padding:10px">
@@ -120,42 +143,45 @@ let current="A";
 
 function selectParty(p){
 party=p;
-document.getElementById("partySelect").classList.add("hidden");
-document.getElementById("game").classList.remove("hidden");
+partySelect.classList.add("hidden");
+game.classList.remove("hidden");
 drawTabs();
-drawGrid();
+drawMap();
 updatePanels();
 }
 
 function drawTabs(){
-const d=document.getElementById("tabs");
-d.innerHTML="";
+tabs.innerHTML="";
 ["A","B","C"].forEach(k=>{
 const b=document.createElement("button");
 b.textContent=cities[k].name;
-b.onclick=()=>{current=k;drawGrid();updatePanels()};
-d.appendChild(b);
+b.onclick=()=>{current=k;drawMap();updatePanels()};
+tabs.appendChild(b);
 });
 }
 
-function drawGrid(){
-const g=document.getElementById("grid");
-g.innerHTML="";
-
-g.className="grid";
-
-g.appendChild(lbl(""));
-for(let i=1;i<=3;i++)g.appendChild(lbl(i));
-g.appendChild(lbl(""));
-for(let i=4;i<=6;i++)g.appendChild(lbl(i));
-
+function drawMap(){
+map.innerHTML="";
 const rows=["A","B","C","D","E","F"];
 
 rows.forEach(r=>{
-g.appendChild(lbl(r));
-for(let c=1;c<=6;c++){
-if(c===4)g.appendChild(road());
+const rowWrap=document.createElement("div");
+rowWrap.className="mapRow";
 
+const lab=document.createElement("div");
+lab.className="rowLabel";
+lab.textContent=r;
+rowWrap.appendChild(lab);
+
+const row=document.createElement("div");
+row.className="gridRow";
+
+for(let c=1;c<=6;c++){
+if(c===4){
+const road=document.createElement("div");
+road.className="road";
+row.appendChild(road);
+}
 const d=document.createElement("div");
 d.className="cell";
 
@@ -165,15 +191,17 @@ d.textContent=cities[current].hq?"HQ":"C3";
 d.textContent="EV";
 }
 
-d.onclick=()=>clickCell(d,r,c);
-g.appendChild(d);
+d.onclick=()=>cellClick(d,r,c);
+row.appendChild(d);
 }
+
+rowWrap.appendChild(row);
+map.appendChild(rowWrap);
 });
 }
 
-function clickCell(d,r,c){
+function cellClick(d,r,c){
 d.classList.toggle("active");
-
 if(r==="C" && c===3 && !cities[current].hq){
 if(money<20)return alert("Para yok");
 cities[current].hq=true;
@@ -183,25 +211,9 @@ updatePanels();
 }
 }
 
-function road(){
-const d=document.createElement("div");
-d.className="road";
-return d;
-}
-
-function lbl(t){
-const d=document.createElement("div");
-d.className="label";
-d.textContent=t;
-return d;
-}
-
 function ideologyScore(i){
 const dist=Math.abs(ideOrder.indexOf(i)-ideOrder.indexOf(party));
-if(dist===0)return .60;
-if(dist===1)return .25;
-if(dist===2)return .10;
-return .05;
+return [0.60,0.25,0.10,0.05][dist]||0.05;
 }
 
 function election(){
@@ -234,18 +246,19 @@ updatePanels();
 }
 
 function updatePanels(){
-document.getElementById("partyInfo").textContent=party;
-document.getElementById("money").textContent=money;
-document.getElementById("turn").textContent=turn;
+partyInfo.textContent=party;
+moneyEl=document.getElementById("money");
+moneyEl.textContent=money;
+turnEl.textContent=turn;
 
 const c=cities[current];
-document.getElementById("cityInfo").innerHTML=`
+cityInfo.innerHTML=`
 <b>${c.name}</b><br>
 Nüfus: ${c.pop} M<br>
-Merkez Sol: %${c.dist.MS||0}<br>
-Merkez Sağ: %${c.dist.MR||0}<br>
-Aşırı Sol: %${c.dist.ASOL||0}<br>
-Aşırı Sağ: %${c.dist.ASAG||0}<br>
+MS %${c.dist.MS||0}<br>
+MR %${c.dist.MR||0}<br>
+ASOL %${c.dist.ASOL||0}<br>
+ASAG %${c.dist.ASAG||0}<br>
 HQ: ${c.hq?"Var":"Yok"}<br>
 Yatırım: ${c.invest}
 `;
